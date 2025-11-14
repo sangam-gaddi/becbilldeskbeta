@@ -1,0 +1,34 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface IChatMessage extends Document {
+  senderId: mongoose.Types.ObjectId;
+  senderName: string;
+  senderUsn: string;
+  receiverId?: mongoose.Types.ObjectId;
+  message: string;
+  isGroupMessage: boolean;
+  readBy: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ChatMessageSchema: Schema = new Schema({
+  senderId: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'Student', 
+    required: true 
+  },
+  senderName: { type: String, required: true },
+  senderUsn: { type: String, required: true },
+  receiverId: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'Student' 
+  },
+  message: { type: String, required: true },
+  isGroupMessage: { type: Boolean, default: true },
+  readBy: [{ type: Schema.Types.ObjectId, ref: 'Student' }]
+}, { timestamps: true });
+
+const ChatMessage: Model<IChatMessage> = mongoose.models.ChatMessage || mongoose.model<IChatMessage>('ChatMessage', ChatMessageSchema);
+
+export default ChatMessage;

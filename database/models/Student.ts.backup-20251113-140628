@@ -1,0 +1,52 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface IStudent extends Document {
+  usn: string;
+  csn: string;
+  idNo: string;
+  studentName: string;
+  paymentCategory: 'KCET' | 'COMEDK' | 'Management';
+  degree: string;
+  stdType: string;
+  casteCat: string;
+  department: string;
+  semester: number;
+  admissionID: string;
+  
+  // Auth fields
+  email?: string;
+  password?: string;
+  recoveryPhraseHash?: string;
+  isRegistered: boolean;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const StudentSchema: Schema = new Schema({
+  usn: { type: String, required: true, unique: true, uppercase: true },
+  csn: { type: String, required: true },
+  idNo: { type: String, required: true },
+  studentName: { type: String, required: true },
+  paymentCategory: { 
+    type: String, 
+    enum: ['KCET', 'COMEDK', 'Management'], 
+    required: true 
+  },
+  degree: { type: String, default: 'B.E' },
+  stdType: { type: String, default: 'Regular' },
+  casteCat: { type: String, required: true },
+  department: { type: String, required: true },
+  semester: { type: Number, required: true },
+  admissionID: { type: String, required: true },
+  
+  // Auth fields
+  email: { type: String, unique: true, sparse: true, lowercase: true },
+  password: { type: String },
+  recoveryPhraseHash: { type: String },
+  isRegistered: { type: Boolean, default: false },
+}, { timestamps: true });
+
+const Student: Model<IStudent> = mongoose.models.Student || mongoose.model<IStudent>('Student', StudentSchema);
+
+export default Student;

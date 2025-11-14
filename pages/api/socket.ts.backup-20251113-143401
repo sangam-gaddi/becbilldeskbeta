@@ -1,0 +1,19 @@
+﻿import { NextApiRequest } from 'next';
+import { NextApiResponseWithSocket, initSocketIO } from '@/lib/socket/server';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+export default function handler(req: NextApiRequest, res: NextApiResponseWithSocket) {
+  if (res.socket.server.io) {
+    console.log('Socket.io already initialized');
+    res.end();
+    return;
+  }
+
+  initSocketIO(res);
+  res.end();
+}

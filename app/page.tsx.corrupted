@@ -1,0 +1,189 @@
+  qW'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSignIn } from '@clerk/nextjs';
+import Link from 'next/link';
+
+export default function HomePage() {
+  const router = useRouter();
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const [formData, setFormData] = useState({ identifier: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isLoaded || !signIn) {
+      setError('Loading... Please wait.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+
+    try {
+      // Try to sign in with username (USN)
+      const result = await signIn.create({
+        identifier: formData.identifier.toUpperCase(), // USN or email
+        password: formData.password,
+      });
+
+      console.log('Login result:', result);
+
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        router.push('/dashboard');
+      } else {
+        setError('Login incomplete. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Provide helpful error messages
+      if (err.errors && err.errors.length > 0) {
+        const errorMsg = err.errors[0].longMessage || err.errors[0].message;
+        
+        if (errorMsg.includes('identifier')) {
+          setError('Account not found. Please check your USN or sign up first.');
+        } else if (errorMsg.includes('password')) {
+          setError('Incorrect password. Please try again or use recovery phrase.');
+        } else {
+          setError(errorMsg);
+        }
+      } else {
+        setError('Login failed. Please check your credentials and try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700">
+      <div className="absolute inset-0 bg-black opacity-20"></div>
+      
+      <div className="relative z-10 max-w-6xl w-full mx-4 grid md:grid-cols-2 gap-8 items-center">
+        {/* Left Side - Branding */}
+        <div className="text-white space-y-6">
+          <h1 className="text-5xl font-bold">College Fee Payment System</h1>
+          <p className="text-xl opacity-90">BVV Sangha College of Engineering & Technology</p>
+          
+          <div className="space-y-4 mt-8">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                🔐
+              </div>
+              <div>
+                <h3 className="font-semibold">Crypto-Style Security</h3>
+                <p className="text-sm opacity-80">12-word recovery phrase protection</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                💳
+              </div>
+              <div>
+                <h3 className="font-semibold">Easy Fee Payment</h3>
+                <p className="text-sm opacity-80">Pay college fees securely online</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                📊
+              </div>
+              <div>
+                <h3 className="font-semibold">Track Payments</h3>
+                <p className="text-sm opacity-80">View payment history & invoices</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Login Box */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-800">Student Login</h2>
+            <p className="text-gray-600 mt-2">Enter your credentials to access your account</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              <p className="font-semibold">Error:</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                USN or Email
+              </label>
+              <input
+                type="text"
+                value={formData.identifier}
+                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="2BA23IS092 or your email"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter your USN (e.g., 2BA23IS092) or email address
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !isLoaded}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center space-y-2">
+            <Link 
+              href="/recover" 
+              className="text-sm text-blue-600 hover:text-blue-700 block"
+            >
+              🔑 Forgot password? Use recovery phrase
+            </Link>
+            
+            <div className="border-t pt-4 mt-4">
+              <p className="text-sm text-gray-600 mb-3">
+                New student? Create your account
+              </p>
+              <Link 
+                href="/signup"
+                className="inline-block w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                Sign Up
+              </Link>
+            </div>
+          </div>
+
+          <p className="mt-6 text-xs text-center text-gray-500">
+            Secured with 256-bit encryption • Recovery phrase backup
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

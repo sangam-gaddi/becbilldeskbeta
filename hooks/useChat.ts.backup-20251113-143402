@@ -1,0 +1,238 @@
+﻿'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+interface Message {
+  _id?: string;
+  type: 'global' | 'private';
+  senderUsn: string;
+  senderName: string;
+  recipientUsn?: string;
+  message: string;
+  createdAt?: Date;
+  timestamp?: Date;
+}
+
+interface OnlineUser {
+  usn: string;
+  studentName: string;
+  department: string;
+}
+
+export function useChat(currentUsn: string, currentName: string) {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [globalMessages, setGlobalMessages] = useState<Message[]>([]);
+  const [privateMessages, setPrivateMessages] = useState<Record<string, Message[]>>({});
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+
+  // Initialize socket connection
+  useEffect(() => {
+    console.log(' Initializing Socket.io connection...');
+    
+    const socketInstance = io({
+      path: '/api/socket',
+      addTrailingSlash: false,
+    });
+
+    socketInstance.on('connect', () => {
+      console.log(' Connected to chat server');
+      setIsConnected(true);
+      
+      // Join with user info
+      socketInstance.emit('join', { usn: currentUsn, name: currentName });
+      
+      // Update online status
+      fetch('/api/chat/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOnline: true }),
+      }).catch(err => console.error('Failed to update online status:', err));
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('❌ Disconnected from chat server');
+      setIsConnected(false);
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+
+    // Listen for new global messages
+    socketInstance.on('new-global-message', (data: Message) => {
+      console.log(' New global message:', data);
+      setGlobalMessages((prev) => [...prev, data]);
+    });
+
+    // Listen for new private messages
+    socketInstance.on('new-private-message', (data: Message) => {
+      console.log('📨 New private message:', data);
+      const otherUsn = data.senderUsn === currentUsn ? data.recipientUsn! : data.senderUsn;
+      setPrivateMessages((prev) => ({
+        ...prev,
+        [otherUsn]: [...(prev[otherUsn] || []), data],
+      }));
+    });
+
+    // Listen for online/offline status
+    socketInstance.on('user-online', (data: { usn: string; name: string }) => {
+      console.log('👤 User online:', data);
+      if (data.usn !== currentUsn) {
+        fetchOnlineUsers();
+      }
+    });
+
+    socketInstance.on('user-offline', (data: { usn: string }) => {
+      console.log(' User offline:', data);
+      setOnlineUsers((prev) => prev.filter((u) => u.usn !== data.usn));
+    });
+
+    // Typing indicators
+    socketInstance.on('user-typing-global', (data: { usn: string; name: string }) => {
+      setTypingUsers((prev) => new Set(prev).add(data.name));
+      setTimeout(() => {
+        setTypingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(data.name);
+          return newSet;
+        });
+      }, 3000);
+    });
+
+    setSocket(socketInstance);
+
+    // Cleanup on unmount - FIXED!
+    return () => {
+      console.log('🧹 Cleaning up socket connection...');
+      
+      // Update offline status BEFORE disconnecting
+      fetch('/api/chat/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOnline: false }),
+      }).catch(err => console.error('Failed to update offline status:', err));
+      
+      // Just close the socket - don't emit 'disconnect' (it's reserved!)
+      socketInstance.close();
+    };
+  }, [currentUsn, currentName]);
+
+  // Fetch initial messages
+  useEffect(() => {
+    fetchGlobalMessages();
+    fetchOnlineUsers();
+  }, []);
+
+  const fetchGlobalMessages = async () => {
+    try {
+      const res = await fetch('/api/chat/global');
+      const data = await res.json();
+      if (data.success) {
+        setGlobalMessages(data.messages);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching global messages:', error);
+    }
+  };
+
+  const fetchPrivateMessages = async (otherUsn: string) => {
+    try {
+      const res = await fetch(`/api/chat/private?usn=${otherUsn}`);
+      const data = await res.json();
+      if (data.success) {
+        setPrivateMessages((prev) => ({
+          ...prev,
+          [otherUsn]: data.messages,
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error fetching private messages:', error);
+    }
+  };
+
+  const fetchOnlineUsers = async () => {
+    try {
+      const res = await fetch('/api/chat/online');
+      const data = await res.json();
+      if (data.success) {
+        setOnlineUsers(data.users);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching online users:', error);
+    }
+  };
+
+  const sendGlobalMessage = useCallback(
+    async (message: string) => {
+      if (!socket || !message.trim()) return;
+
+      try {
+        // Save to database
+        const res = await fetch('/api/chat/global', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
+
+        if (res.ok) {
+          // Emit via socket for real-time
+          socket.emit('send-global-message', { message });
+        }
+      } catch (error) {
+        console.error(' Error sending message:', error);
+      }
+    },
+    [socket]
+  );
+
+  const sendPrivateMessage = useCallback(
+    async (recipientUsn: string, message: string) => {
+      if (!socket || !message.trim()) return;
+
+      try {
+        // Save to database
+        const res = await fetch('/api/chat/private', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipientUsn, message }),
+        });
+
+        if (res.ok) {
+          // Emit via socket for real-time
+          socket.emit('send-private-message', { recipientUsn, message });
+        }
+      } catch (error) {
+        console.error('❌ Error sending private message:', error);
+      }
+    },
+    [socket]
+  );
+
+  const sendTypingIndicator = useCallback(
+    (isGlobal: boolean, recipientUsn?: string) => {
+      if (!socket) return;
+
+      if (isGlobal) {
+        socket.emit('typing-global');
+      } else if (recipientUsn) {
+        socket.emit('typing-private', { recipientUsn });
+      }
+    },
+    [socket]
+  );
+
+  return {
+    isConnected,
+    globalMessages,
+    privateMessages,
+    onlineUsers,
+    typingUsers,
+    sendGlobalMessage,
+    sendPrivateMessage,
+    sendTypingIndicator,
+    fetchPrivateMessages,
+  };
+}
