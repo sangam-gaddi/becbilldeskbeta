@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           >
             <p className="text-gray-600 text-sm mb-2">Total Pending</p>
             <p className="text-3xl font-bold text-gray-900">
-              ₹{unpaidFees.reduce((sum, fee) => sum + fee.total, 0).toLocaleString()}
+              â‚¹{unpaidFees.reduce((sum, fee) => sum + fee.total, 0).toLocaleString()}
             </p>
           </motion.div>
 
@@ -171,7 +171,7 @@ export default function DashboardPage() {
           >
             <p className="text-gray-600 text-sm mb-2">Total Paid</p>
             <p className="text-3xl font-bold text-green-600">
-              ₹{paidFeesData.reduce((sum, fee) => sum + fee.total, 0).toLocaleString()}
+              â‚¹{paidFeesData.reduce((sum, fee) => sum + fee.total, 0).toLocaleString()}
             </p>
           </motion.div>
 
@@ -224,7 +224,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-3xl font-bold text-gray-900">₹{fee.total.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-gray-900">â‚¹{fee.total.toLocaleString()}</p>
                     <p className="text-sm text-gray-500 mt-1">0.0001 ETH (Sepolia)</p>
                   </div>
 
@@ -254,7 +254,7 @@ export default function DashboardPage() {
                               <p className="font-semibold text-gray-900 text-sm">{item.category}</p>
                               <p className="text-xs text-gray-600">{item.description}</p>
                             </div>
-                            <p className="font-bold text-gray-900">₹{item.amount.toLocaleString()}</p>
+                            <p className="font-bold text-gray-900">â‚¹{item.amount.toLocaleString()}</p>
                           </div>
                         ))}
                       </motion.div>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
                       <p className="text-sm text-green-700 font-semibold">Payment Completed</p>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">₹{fee.total.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">â‚¹{fee.total.toLocaleString()}</p>
                 </div>
               ))}
             </div>
@@ -324,7 +324,9 @@ export default function DashboardPage() {
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
-                    <p className="text-xl font-bold text-green-600">₹{payment.amount.toLocaleString()}</p>
+<p className="text-xl font-bold text-green-600">
+  ₹{(typeof payment.amount === 'number' && isFinite(payment.amount) ? payment.amount.toLocaleString() : 'N/A')}
+</p>
                   </div>
                 ))}
               </div>
@@ -344,7 +346,7 @@ export default function DashboardPage() {
           >
             <div className="bg-white rounded-2xl p-6 shadow-2xl border border-gray-200 min-w-[300px]">
               <p className="text-sm text-gray-600 mb-2">{selectedFees.length} fee(s) selected</p>
-              <p className="text-3xl font-bold text-gray-900 mb-4">₹{totalAmount.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-gray-900 mb-4">â‚¹{totalAmount.toLocaleString()}</p>
               <button
                 onClick={handleProceedToPayment}
                 className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105"
