@@ -1,4 +1,4 @@
-# 🚀 BEC BillDesk — The Ultimate College Fee Payment & Student Portal
+ BEC BillDesk — The Ultimate College Fee Payment & Student Portal
 
 BEC BillDesk is not just a web app—it's the next big leap for digital transformation in campus finance and student engagement!
 
